@@ -1,9 +1,18 @@
 from django.forms import widgets
 from rest_framework import serializers
 from weather.models import Weather
+from django.contrib.auth.models import User
 
+class UserSerializer(serializers.ModelSerializer):
+    weather = serializers.PrimaryKeyRelatedField(many=True, queryset=Weather.objects.all())
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'weather')
 
 class WeatherSerializer(serializers.Serializer):
+    owner = serializers.ReadOnlyField(source='owner.username')
+
     pk = serializers.IntegerField(read_only=True)
     comment = serializers.CharField(required=False, allow_blank=True, max_length=100)
 
@@ -18,7 +27,7 @@ class WeatherSerializer(serializers.Serializer):
 
     class Meta:
         model = Weather
-        fields = ('id', 'comment', 'bmp180temp', 'bmp180pres', 'v_bat', 'v_sun')
+        fields = ('id', 'owner', 'comment', 'bmp180temp', 'bmp180pres', 'v_bat', 'v_sun')
 
     def create(self, validated_data):
         """

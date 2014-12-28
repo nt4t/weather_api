@@ -5,7 +5,9 @@ from pygments.styles import get_all_styles
 import datetime
 from django.utils import timezone
 
-class Weather(models.Model):
+class Weather(models.Model): 
+    owner = models.ForeignKey('auth.User', related_name='weather')
+
     created = models.DateTimeField(auto_now_add=True)
     created_at = models.DateField(default=timezone.now)
 #    updated_at = models.AutoDateTimeField(default=timezone.now)
@@ -23,3 +25,5 @@ class Weather(models.Model):
 
     class Meta:
         ordering = ('created',)
+
+

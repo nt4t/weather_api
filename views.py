@@ -6,56 +6,33 @@ from rest_framework.parsers import JSONParser
 
 from weather.models import Weather
 from weather.serializers import WeatherSerializer
+from weather.serializers import UserSerializer
 
-class JSONResponse(HttpResponse):
-    """
-    An HttpResponse that renders its content into JSON.
-    """
-    def __init__(self, data, **kwargs):
-        content = JSONRenderer().render(data)
-        kwargs['content_type'] = 'application/json'
-        super(JSONResponse, self).__init__(content, **kwargs)
+from rest_framework import generics
 
-@csrf_exempt
-def weather_list(request):
-    """
-    List all code snippets, or create a new snippet.
-    """
-    if request.method == 'GET':
-        weathers = Weather.objects.all()
-        serializer = WeatherSerializer(weathers, many=True)
-        return JSONResponse(serializer.data)
+from django.contrib.auth.models import User
 
-    elif request.method == 'POST':
-        data = JSONParser().parse(request)
-        serializer = WeatherSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return JSONResponse(serializer.data, status=201)
-        return JSONResponse(serializer.errors, status=400)
+from rest_framework import permissions
+from weather.permissions import IsOwnerOrReadOnly
 
-@csrf_exempt
-def weather_detail(request, pk):
-    """
-    Retrieve, update or delete a code snippet.
-    """
-    try:
-        weather = Weather.objects.get(pk=pk)
-    except Weather.DoesNotExist:
-        return HttpResponse(status=404)
+class UserList(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
-    if request.method == 'GET':
-        serializer = WeatherSerializer(weather)
-        return JSONResponse(serializer.data)
 
-    elif request.method == 'PUT':
-        data = JSONParser().parse(request)
-        serializer = WeatherSerializer(weather, data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return JSONResponse(serializer.data)
-        return JSONResponse(serializer.errors, status=400)
+class UserDetail(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
-    elif request.method == 'DELETE':
-        weather.delete()
-        return HttpResponse(status=204)
+class WeatherList(generics.ListCreateAPIView):
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    queryset = Weather.objects.all()
+    serializer_class = WeatherSerializer
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+class WeatherDetail(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly,)
+#    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    queryset = Weather.objects.all()
+    serializer_class = WeatherSerializer
